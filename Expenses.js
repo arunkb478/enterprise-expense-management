@@ -143,6 +143,7 @@ function Dashboard() {
                 <Button variant="contained" color="secondary" onClick={() => alert('Password Updated')} sx={{ mt: 2 }}>Update Password</Button>
                 <Typography variant="h6" mt={3}>Company Support</Typography>
                 <Typography>Email: support@company.com</Typography>
+                <Typography>variant="h2"</Typography>
                 <Typography>Phone: +1234567890</Typography>
                 <Button variant="contained" color="error" onClick={handleLogout} sx={{ mt: 2 }}>Logout</Button>
               </Box>
