@@ -1,153 +1,158 @@
-// src/components/Expenses.js
 import React, { useEffect, useState } from 'react';
-import { Container, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, Button, Box } from '@mui/material';
-import { Pie } from 'react-chartjs-2';
+import { Container, Typography, Box, Button, List, ListItem, ListItemText, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Bar, Pie, Line } from 'react-chartjs-2';
 import 'chart.js/auto';
 
-function Expenses() {
+function Dashboard() {
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
-  const [expenses, setExpenses] = useState(() => {
-    return JSON.parse(localStorage.getItem('expenses')) || [];
-  });
-  const [newExpense, setNewExpense] = useState({ category: '', amount: '' });
-  const [allUsers, setAllUsers] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+  const [totalAmount, setTotalAmount] = useState(0);
+  const [selectedSection, setSelectedSection] = useState('Dashboard');
+  const [newPassword, setNewPassword] = useState('');
 
   useEffect(() => {
     const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
-    const users = JSON.parse(localStorage.getItem('users')) || [];
-    if (loggedInUser) {
+    if (!loggedInUser) {
+      navigate('/login');
+    } else {
       setUser(loggedInUser);
-      setAllUsers(users);
+      const storedExpenses = JSON.parse(localStorage.getItem('expenses')) || [];
+      setExpenses(storedExpenses);
+      const total = storedExpenses.filter(exp => exp.employee === loggedInUser.name && exp.status === 'Approved')
+        .reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+      setTotalAmount(total);
     }
-  }, []);
+  }, [navigate]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setNewExpense({ ...newExpense, [name]: value });
+  const handleLogout = () => {
+    localStorage.removeItem('loggedInUser');
+    navigate('/login');
   };
 
-  const handleAddExpense = () => {
-    if (!newExpense.category || !newExpense.amount) return;
-    const newEntry = { id: expenses.length + 1, employee: user.name, ...newExpense, status: 'Pending' };
-    const updatedExpenses = [...expenses, newEntry];
-    setExpenses(updatedExpenses);
-    localStorage.setItem('expenses', JSON.stringify(updatedExpenses));
-    setNewExpense({ category: '', amount: '' });
-  };
-
-  const handleApprove = (index) => {
-    const updatedExpenses = [...expenses];
-    updatedExpenses[index].status = 'Approved';
-    setExpenses(updatedExpenses);
-    localStorage.setItem('expenses', JSON.stringify(updatedExpenses));
-  };
-
-  const handleReject = (index) => {
-    const updatedExpenses = [...expenses];
-    updatedExpenses[index].status = 'Rejected';
-    setExpenses(updatedExpenses);
-    localStorage.setItem('expenses', JSON.stringify(updatedExpenses));
-  };
-
-  const generateChartData = () => {
-    const categories = {};
-    expenses.forEach(exp => {
-      categories[exp.category] = (categories[exp.category] || 0) + parseFloat(exp.amount);
-    });
-    return {
-      labels: Object.keys(categories),
-      datasets: [
-        {
-          data: Object.values(categories),
-          backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4CAF50', '#FFA500'],
-        },
-      ],
-    };
-  };
+  const approvedExpenses = expenses.filter(exp => exp.status === 'Approved');
+  const rejectedExpenses = expenses.filter(exp => exp.status === 'Rejected');
 
   return (
-    <Container maxWidth="md">
-      <Typography variant="h4" textAlign="center" mt={4}>
-        {user?.name} ({user?.employeeId}) - {user?.role === 'manager' ? 'You are a Manager' : 'Employee'}
-      </Typography>
-      {user?.role === 'manager' && (
-        <Box mt={3}>
-          <Typography variant="h5" textAlign="center" mb={2}>Pending Expenses for Approval</Typography>
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Employee</TableCell>
-                  <TableCell>Category</TableCell>
-                  <TableCell>Amount</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {expenses.map((expense, index) => (
-                  <TableRow key={expense.id}>
-                    <TableCell>{expense.employee}</TableCell>
-                    <TableCell>{expense.category}</TableCell>
-                    <TableCell>${expense.amount}</TableCell>
-                    <TableCell>{expense.status}</TableCell>
-                    <TableCell>
-                      {expense.status === 'Pending' && (
-                        <>
-                          <Button variant="contained" color="success" size="small" onClick={() => handleApprove(index)}>
-                            Approve
-                          </Button>
-                          <Button variant="contained" color="error" size="small" onClick={() => handleReject(index)} style={{ marginLeft: '10px' }}>
-                            Reject
-                          </Button>
-                        </>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
-      )}
-      {user?.role !== 'manager' && (
-        <Box>
-          <Typography variant="h5" textAlign="center" mb={2}>Your Expenses</Typography>
-          <Box display="flex" gap={2} mb={3}>
-            <TextField label="Category" name="category" fullWidth onChange={handleChange} value={newExpense.category} />
-            <TextField label="Amount" name="amount" type="number" fullWidth onChange={handleChange} value={newExpense.amount} />
-            <Button variant="contained" color="primary" onClick={handleAddExpense}>Add Expense</Button>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1 }}>
+      <Container maxWidth="lg">
+        <Box display="flex">
+          
+          {/* Sidebar Menu */}
+          <Box 
+            width={200} 
+            bgcolor="#dfe24a" 
+            p={2} 
+            boxShadow={1} 
+            position="absolute" 
+            bottom={0} 
+            left={0} 
+            top={65}
+            height="80vh"
+            display="flex" 
+            flexDirection="column" 
+            justifyContent="flex-start"
+          >
+            <List>
+              {['Profile', 'Approvals', 'Reports', 'Analysis', 'Settings'].map(section => (
+                <ListItem button key={section} onClick={() => setSelectedSection(section)}>
+                  <ListItemText primary={section} />
+                </ListItem>
+              ))}
+              <ListItem button onClick={handleLogout}>
+                <ListItemText primary="Logout" />
+              </ListItem>
+            </List>
           </Box>
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>ID</TableCell>
-                  <TableCell>Category</TableCell>
-                  <TableCell>Amount</TableCell>
-                  <TableCell>Status</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {expenses.filter(exp => exp.employee === user?.name).map((expense) => (
-                  <TableRow key={expense.id}>
-                    <TableCell>{expense.id}</TableCell>
-                    <TableCell>{expense.category}</TableCell>
-                    <TableCell>${expense.amount}</TableCell>
-                    <TableCell>{expense.status}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+
+          {/* Main Content */}
+          <Box flex={1} ml={25} mt={5} textAlign="center">
+            <Typography variant="h4">Welcome, {user?.name} ({user?.employeeId})</Typography>
+
+            {/* Profile Section */}
+            {selectedSection === 'Profile' && (
+              <Box mt={3} p={3} bgcolor="#f9f9f9" borderRadius={3} boxShadow={2}>
+                <Typography variant="h5">User Profile</Typography>
+                <Typography>Name: {user?.name}</Typography>
+                <Typography>Employee ID: {user?.employeeId}</Typography>
+                <Typography>Email: {user?.email}</Typography>
+                <Typography>Date of Birth: {user?.dob}</Typography>
+                <img src={user?.photo} alt="Profile" width="100px" height="100px" style={{ borderRadius: '50%', marginTop: 10 }} />
+              </Box>
+            )}
+
+            {/* Approvals Section */}
+            {selectedSection === 'Approvals' && (
+              <Box mt={3}>
+                <Typography variant="h5">Expense Approvals</Typography>
+                <TableContainer component={Paper}>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Expense</TableCell>
+                        <TableCell>Status</TableCell>
+                        <TableCell>Amount</TableCell>
+                        <TableCell>Reason (if rejected)</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {expenses.map(exp => (
+                        <TableRow key={exp.id}>
+                          <TableCell>{exp.description}</TableCell>
+                          <TableCell>{exp.status}</TableCell>
+                          <TableCell>${exp.amount}</TableCell>
+                          <TableCell>{exp.status === 'Rejected' ? exp.reason : '-'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                <Typography variant="h6" mt={3}>Credited Amount Graph</Typography>
+                <Bar data={{ labels: approvedExpenses.map(exp => exp.description), datasets: [{ label: 'Credited Amount', data: approvedExpenses.map(exp => exp.amount), backgroundColor: 'green' }] }} />
+              </Box>
+            )}
+
+            {/* Reports Section */}
+            {selectedSection === 'Reports' && (
+              <Box mt={3}>
+                <Typography variant="h5">Expense Reports</Typography>
+                <Typography>Total Credited: ${totalAmount}</Typography>
+                <Button variant="contained" color="primary" onClick={() => alert('Reported to Manager')}>Report Expense</Button>
+              </Box>
+            )}
+
+            {/* Analysis Section */}
+            {selectedSection === 'Analysis' && (
+              <Box mt={3}>
+                <Typography variant="h5">Expense Analysis</Typography>
+                <Typography>Expense Overview</Typography>
+                <Pie data={{ labels: ['Credited', 'Pending'], datasets: [{ data: [totalAmount, rejectedExpenses.length], backgroundColor: ['blue', 'red'] }] }} />
+                <Typography variant="h6" mt={3}>Expense Over Time</Typography>
+                <Line data={{ labels: approvedExpenses.map(exp => exp.description), datasets: [{ label: 'Amount', data: approvedExpenses.map(exp => exp.amount), borderColor: 'purple' }] }} />
+              </Box>
+            )}
+
+            {/* Settings Section */}
+            {selectedSection === 'Settings' && (
+              <Box mt={3} p={3} bgcolor="#f9f9f9" borderRadius={3} boxShadow={2}>
+                <Typography variant="h5">Settings</Typography>
+                <Typography variant="h6" mt={2}>Change Password</Typography>
+                <TextField label="New Password" type="password" fullWidth value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                <Button variant="contained" color="secondary" onClick={() => alert('Password Updated')} sx={{ mt: 2 }}>Update Password</Button>
+                <Typography variant="h6" mt={3}>Company Support</Typography>
+                <Typography>Email: support@company.com</Typography>
+                <Typography>Phone: +1234567890</Typography>
+                <Button variant="contained" color="error" onClick={handleLogout} sx={{ mt: 2 }}>Logout</Button>
+              </Box>
+            )}
+
+          </Box>
         </Box>
-      )}
-      <Box mt={4}>
-        <Typography variant="h6">Expense Summary</Typography>
-        <Pie data={generateChartData()} />
-      </Box>
-    </Container>
+      </Container>
+    </motion.div>
   );
 }
 
-export default Expenses;
+export default Dashboard;
